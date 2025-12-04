@@ -1,0 +1,1 @@
+A crate for a data structure that's a list whose "fold" can be quickly queried, and which also supports many other fast operations on lists.

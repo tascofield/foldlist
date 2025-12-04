@@ -2,6 +2,9 @@
 name = "foldlist"
 version = "0.1.0"
 edition = "2024"
+description = "A mutable list with fast folding"
+license = "MIT"
+readme = "README.md"
 
 [dependencies]
 
