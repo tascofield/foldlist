@@ -5,6 +5,7 @@ edition = "2024"
 description = "A mutable list with fast folding"
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/tascofield/foldlist"
 
 [dependencies]
 
