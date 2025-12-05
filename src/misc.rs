@@ -81,25 +81,27 @@ pub trait SingleEndedRange<T> {
     /// A [type-level boolean](Bool) which is [True] for `x..` and [False] for `..x`
     type EndIsLeft: Bool;
     /// The endpoint in question.
-    fn end(self) -> T;
+    fn end(range: Self) -> T;
 }
 
 impl<T> SingleEndedRange<T> for core::ops::RangeFrom<T> {
     type EndIsLeft = True;
-    fn end(self) -> T {
-        self.start
+    fn end(range: Self) -> T {
+        range.start
     }
 }
 
 impl<T> SingleEndedRange<T> for core::ops::RangeTo<T> {
     type EndIsLeft = False;
-    fn end(self) -> T {
-        self.end
+    fn end(range: Self) -> T {
+        range.end
     }
 }
 
 /// A trait for type-level booleans, used internally to implement slice types more efficiently.
-pub trait Bool: 'static + Sized {
+/// 
+/// This trait is sealed and cannot be implemented for types outside this crate.
+pub trait Bool: 'static + Sized + private::Sealed {
     #![allow(missing_docs)]
     type IfElse<A,B>;
     type And<B: Bool> : Bool;
@@ -309,3 +311,10 @@ pub(crate) fn cswap<B: Bool,T>(a: T, b: T) -> (T,T) {
         (a,b)
     }
 }
+
+pub(crate) mod private {
+    pub trait Sealed {}
+}
+
+impl private::Sealed for False {}
+impl private::Sealed for True {}

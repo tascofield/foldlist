@@ -2,6 +2,7 @@ use core::panic;
 use core::{iter::FusedIterator, marker::PhantomData, ptr::NonNull};
 
 use crate::fold_settings::SettingsWithSize;
+use crate::misc::private::Sealed;
 use crate::misc::{NoneFun, OptOpFun, SingleEndedRange, SomeFun, TupleFun};
 use crate::{fold_list::{FoldList}, fold_settings::{FoldSettings, FoldSettingsStruct}, fold_simplification::{FoldSimplification, SimplificationWithShortcut, SimplificationWithoutShortcut}, misc::{bool_assert_into, bool_ifelse_clone, cswap, Bool, EmptyFn, False, Fun, True}};
 
@@ -865,7 +866,9 @@ unsafe fn node_of_first_where_fold_left_is_template<Reversed: Bool, IsFlushLeft:
 /// The trait for views into a [`FoldChain`].
 /// 
 /// For views which are also mutable, see [`MutFoldChainSlice`].
-pub trait FoldChainSlice<'a,T: 'a,D: Clone + 'a> : 'a + Sized {
+/// 
+/// This trait is sealed and cannot be implemented for types outside this crate.
+pub trait FoldChainSlice<'a,T: 'a,D: Clone + 'a> : 'a + Sized + Sealed {
     /// The `D` type of the base [`FoldChain`]. May differ from this `D` if a simplification has been applied.
     type OriginalD: Clone + 'a;
 
@@ -966,7 +969,7 @@ pub trait FoldChainSlice<'a,T: 'a,D: Clone + 'a> : 'a + Sized {
     /// 
     /// This operation's mutable version is [`mut_view_drop`](MutFoldChainSlice::mut_view_drop).
     fn view_drop<Predicate: Fn(&D)->bool, Range: SingleEndedRange<Predicate>>(self, range: Range) -> <<Range as SingleEndedRange<Predicate>>::EndIsLeft as Bool>::IfElse<ImmFoldChainSliceStruct<'a, <<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not as Bool>::Not, <<Self as FoldChainSlice<'a, T, D>>::IsFlushLeft as Bool>::And<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not>, <<Self as FoldChainSlice<'a, T, D>>::IsFlushRight as Bool>::And<<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not as Bool>::Not>, <Self as FoldChainSlice<'a, T, D>>::Settings, <Self as FoldChainSlice<'a, T, D>>::Simplification, T, <Self as FoldChainSlice<'a, T, D>>::OriginalD>, ImmFoldChainSliceStruct<'a, <Self as FoldChainSlice<'a, T, D>>::IsReversed, <<Self as FoldChainSlice<'a, T, D>>::IsFlushLeft as Bool>::And<<Self as FoldChainSlice<'a, T, D>>::IsReversed>, <<Self as FoldChainSlice<'a, T, D>>::IsFlushRight as Bool>::And<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not>, <Self as FoldChainSlice<'a, T, D>>::Settings, <Self as FoldChainSlice<'a, T, D>>::Simplification, T, <Self as FoldChainSlice<'a, T, D>>::OriginalD>> {
-        Range::EndIsLeft::init_if_else((self,range.end()), 
+        Range::EndIsLeft::init_if_else((self,SingleEndedRange::end(range)), 
         |(this,end)| this.view_drop_right_until(end), 
         |(this,end)| this.view_drop_left_until(end), 
         )
@@ -980,7 +983,7 @@ pub trait FoldChainSlice<'a,T: 'a,D: Clone + 'a> : 'a + Sized {
     /// 
     /// This operation's mutable version is [`mut_view_take`](MutFoldChainSlice::mut_view_take).
     fn view_take<Predicate: Fn(&D)->bool, Range: SingleEndedRange<Predicate>>(self, range: Range) -> <<Range as SingleEndedRange<Predicate>>::EndIsLeft as Bool>::IfElse<ImmFoldChainSliceStruct<'a, <Self as FoldChainSlice<'a, T, D>>::IsReversed, <<Self as FoldChainSlice<'a, T, D>>::IsFlushLeft as Bool>::And<<Self as FoldChainSlice<'a, T, D>>::IsReversed>, <<Self as FoldChainSlice<'a, T, D>>::IsFlushRight as Bool>::And<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not>, <Self as FoldChainSlice<'a, T, D>>::Settings, <Self as FoldChainSlice<'a, T, D>>::Simplification, T, <Self as FoldChainSlice<'a, T, D>>::OriginalD>, ImmFoldChainSliceStruct<'a, <<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not as Bool>::Not, <<Self as FoldChainSlice<'a, T, D>>::IsFlushLeft as Bool>::And<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not>, <<Self as FoldChainSlice<'a, T, D>>::IsFlushRight as Bool>::And<<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not as Bool>::Not>, <Self as FoldChainSlice<'a, T, D>>::Settings, <Self as FoldChainSlice<'a, T, D>>::Simplification, T, <Self as FoldChainSlice<'a, T, D>>::OriginalD>> {
-        Range::EndIsLeft::init_if_else((self,range.end()), 
+        Range::EndIsLeft::init_if_else((self,SingleEndedRange::end(range)), 
         |(this,end)| this.view_take_right_until(end), 
         |(this,end)| this.view_take_left_until(end), 
         )
@@ -1107,7 +1110,7 @@ pub trait FoldChainSlice<'a,T: 'a,D: Clone + 'a> : 'a + Sized {
 /// The trait for mutable views into a [`FoldChain`].
 /// 
 /// This is a subtrait of [`FoldChainSlice`].
-pub trait MutFoldChainSlice<'a,T: 'a,D: Clone + 'a> : FoldChainSlice<'a,T,D> {
+pub trait MutFoldChainSlice<'a,T: 'a,D: Clone + 'a> : FoldChainSlice<'a,T,D> + Sealed {
     /// Normalize this view's type. This is mostly useless.
     fn as_mut(self) -> MutFoldChainSliceStruct<'a,Self::IsReversed,Self::IsFlushLeft,Self::IsFlushRight,T,Self::OriginalD,Self::Settings,Self::Simplification>;
 
@@ -1184,7 +1187,7 @@ pub trait MutFoldChainSlice<'a,T: 'a,D: Clone + 'a> : FoldChainSlice<'a,T,D> {
     /// 
     /// This operation's immutable version is [`view_drop`](FoldChainSlice::view_drop).
     fn mut_view_drop<Predicate: Fn(&D)->bool, Range: SingleEndedRange<Predicate>>(self, range: Range) -> <<Range as SingleEndedRange<Predicate>>::EndIsLeft as Bool>::IfElse<MutFoldChainSliceStruct<'a, <<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not as Bool>::Not, <<Self as FoldChainSlice<'a, T, D>>::IsFlushLeft as Bool>::And<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not>, <<Self as FoldChainSlice<'a, T, D>>::IsFlushRight as Bool>::And<<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not as Bool>::Not>, T, <Self as FoldChainSlice<'a, T, D>>::OriginalD, <Self as FoldChainSlice<'a, T, D>>::Settings, <Self as FoldChainSlice<'a, T, D>>::Simplification>, MutFoldChainSliceStruct<'a, <Self as FoldChainSlice<'a, T, D>>::IsReversed, <<Self as FoldChainSlice<'a, T, D>>::IsFlushLeft as Bool>::And<<Self as FoldChainSlice<'a, T, D>>::IsReversed>, <<Self as FoldChainSlice<'a, T, D>>::IsFlushRight as Bool>::And<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not>, T, <Self as FoldChainSlice<'a, T, D>>::OriginalD, <Self as FoldChainSlice<'a, T, D>>::Settings, <Self as FoldChainSlice<'a, T, D>>::Simplification>> {
-        Range::EndIsLeft::init_if_else((self,range.end()), 
+        Range::EndIsLeft::init_if_else((self,SingleEndedRange::end(range)), 
         |(this,end)| this.mut_view_drop_right_until(end), 
         |(this,end)| this.mut_view_drop_left_until(end), 
         )
@@ -1198,7 +1201,7 @@ pub trait MutFoldChainSlice<'a,T: 'a,D: Clone + 'a> : FoldChainSlice<'a,T,D> {
     /// 
     /// This operation's immutable version is [`view_take`](FoldChainSlice::view_take).
     fn mut_view_take<Predicate: Fn(&D)->bool, Range: SingleEndedRange<Predicate>>(self, range: Range) -> <<Range as SingleEndedRange<Predicate>>::EndIsLeft as Bool>::IfElse<MutFoldChainSliceStruct<'a, <Self as FoldChainSlice<'a, T, D>>::IsReversed, <<Self as FoldChainSlice<'a, T, D>>::IsFlushLeft as Bool>::And<<Self as FoldChainSlice<'a, T, D>>::IsReversed>, <<Self as FoldChainSlice<'a, T, D>>::IsFlushRight as Bool>::And<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not>, T, <Self as FoldChainSlice<'a, T, D>>::OriginalD, <Self as FoldChainSlice<'a, T, D>>::Settings, <Self as FoldChainSlice<'a, T, D>>::Simplification>, MutFoldChainSliceStruct<'a, <<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not as Bool>::Not, <<Self as FoldChainSlice<'a, T, D>>::IsFlushLeft as Bool>::And<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not>, <<Self as FoldChainSlice<'a, T, D>>::IsFlushRight as Bool>::And<<<<Self as FoldChainSlice<'a, T, D>>::IsReversed as Bool>::Not as Bool>::Not>, T, <Self as FoldChainSlice<'a, T, D>>::OriginalD, <Self as FoldChainSlice<'a, T, D>>::Settings, <Self as FoldChainSlice<'a, T, D>>::Simplification>> {
-        Range::EndIsLeft::init_if_else((self,range.end()), 
+        Range::EndIsLeft::init_if_else((self,SingleEndedRange::end(range)), 
         |(this,end)| this.mut_view_take_right_until(end), 
         |(this,end)| this.mut_view_take_left_until(end), 
         )
@@ -1425,6 +1428,13 @@ pub struct FoldChain<T,D: Clone, Settings: FoldSettings<T,D>> {
     //the above pointers should never be none unless root is none
     pub(crate) settings: Settings
 }
+
+impl<T, D: Clone, Settings: FoldSettings<T,D>> Sealed for &FoldChain<T, D, Settings> {}
+impl<T, D: Clone, Settings: FoldSettings<T,D>> Sealed for &mut FoldChain<T, D, Settings> {}
+
+//send and sync are justified because leftmost_node_ptr and rightmost_node_ptr always point into root
+unsafe impl<T: Sync, D: Clone + Sync, Settings: FoldSettings<T,D> + Sync> Sync for FoldChain<T, D, Settings> {}
+unsafe impl<T: Send, D: Clone + Send, Settings: FoldSettings<T,D> + Send> Send for FoldChain<T, D, Settings> {}
 
 
 impl<T, D: Clone, Settings: FoldSettings<T,D>> FoldChain<T, (usize,D), SettingsWithSize<Settings>> {
@@ -2295,6 +2305,18 @@ pub struct ImmFoldChainSliceStruct<'a,
         pub(crate) _m: PhantomData<(&'a FoldChain<T,D,Settings>,IsReversed,IsFlushLeft,IsFlushRight)>
 }
 
+impl<'a, IsReversed: Bool, IsFlushLeft: Bool, IsFlushRight: Bool, Settings: FoldSettings<T,D> + 'a, Simplification: FoldSimplification<T,D> + 'a, T: 'a, D: Clone + 'a> 
+Sealed for ImmFoldChainSliceStruct<'a, IsReversed, IsFlushLeft, IsFlushRight, Settings, Simplification, T, D> {}
+
+// send and sync are justified because endpoints are only ever used immutably, and point to the base struct, which this borrows from
+unsafe impl<'a, IsReversed: Bool, IsFlushLeft: Bool, IsFlushRight: Bool, Settings: FoldSettings<T,D> + 'a + Sync, Simplification: FoldSimplification<T,D> + 'a + Sync, T: 'a + Sync, D: Clone + 'a + Sync> 
+Sync for ImmFoldChainSliceStruct<'a, IsReversed, IsFlushLeft, IsFlushRight, Settings, Simplification, T, D> {}
+
+unsafe impl<'a, IsReversed: Bool, IsFlushLeft: Bool, IsFlushRight: Bool, Settings: FoldSettings<T,D> + 'a + Send, Simplification: FoldSimplification<T,D> + 'a + Send, T: 'a + Send, D: Clone + 'a + Send> 
+Send for ImmFoldChainSliceStruct<'a, IsReversed, IsFlushLeft, IsFlushRight, Settings, Simplification, T, D> {}
+
+
+
 impl<'a, IsReversed: Bool, IsFlushLeft: Bool, IsFlushRight: Bool, Settings: FoldSettings<T,D> + 'a, Simplification: FoldSimplification<T,D> + 'a, T: 'a, D: Clone + 'a> ImmFoldChainSliceStruct<'a, IsReversed, IsFlushLeft, IsFlushRight, Settings, Simplification, T, D> {
     pub(crate) fn left_consume(self) -> Option<&'a T> {
         if IsReversed::b {
@@ -3097,6 +3119,17 @@ pub struct MutFoldChainSliceStruct<'a,
         pub(crate) simplification: Simplification,
         pub(crate) _m: PhantomData<IsReversed>
 }
+
+impl<'a, IsReversed: Bool, IsFlushLeft: Bool, IsFlushRight: Bool, T, D: Clone, Settings: FoldSettings<T,D> + 'a, Simplification: FoldSimplification<T,D> + 'a> 
+Sealed for MutFoldChainSliceStruct<'a, IsReversed, IsFlushLeft, IsFlushRight, T, D, Settings, Simplification> {}
+
+// send and sync are justified because this has sole ownership(/borrowship) over the original, and only allows mutation of it if self is owned or mutably borrowed
+// (and endpoints only points into the original)
+unsafe impl<'a, IsReversed: Bool, IsFlushLeft: Bool, IsFlushRight: Bool, T: Sync, D: Clone + Sync, Settings: FoldSettings<T,D> + 'a + Sync, Simplification: FoldSimplification<T,D> + 'a + Sync> 
+Sync for MutFoldChainSliceStruct<'a, IsReversed, IsFlushLeft, IsFlushRight, T, D, Settings, Simplification> {}
+
+unsafe impl<'a, IsReversed: Bool, IsFlushLeft: Bool, IsFlushRight: Bool, T: Send, D: Clone + Send, Settings: FoldSettings<T,D> + 'a + Send, Simplification: FoldSimplification<T,D> + 'a + Send> 
+Send for MutFoldChainSliceStruct<'a, IsReversed, IsFlushLeft, IsFlushRight, T, D, Settings, Simplification> {}
 
 impl<'a, T, D: Clone, Settings: FoldSettings<T,D> + 'a> MutFoldChainSliceStruct<'a, False, True, True, T, D, Settings,()> {
     fn new_from(chain: &'a mut FoldChain<T,D,Settings>) -> Self {

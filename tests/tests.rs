@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod vec_based_fold_chain_slice;
-use foldlist::{fold_chain::{FoldChain, FoldChainSlice, ImmFoldChainSliceStruct, MutFoldChainSlice, MutFoldChainSliceStruct}, fold_list::{FoldList, FoldListSlice, FoldListSliceFrom, MutFoldListSlice}, fold_settings::{FoldSettings, FoldSettingsStruct}, fold_simplification::FoldSimplification, misc::TupleFun};
+use foldlist::{fold_chain::{FoldChain, FoldChainSlice, ImmFoldChainSliceStruct, MutFoldChainSlice, MutFoldChainSliceStruct}, fold_list::{FoldList, FoldListSlice, FoldListSliceFrom, MutFoldListSlice}, fold_settings::{FoldSettings, FoldSettingsStruct, SettingsWithSize}, fold_simplification::FoldSimplification, misc::{Bool,TupleFun}};
 use rand::Rng;
 use std::{cell::RefCell, fmt::Debug, io::Write, marker::PhantomData, rc::Rc};
 use rand::{SeedableRng, rngs::StdRng};
@@ -8,11 +8,30 @@ use rand::{SeedableRng, rngs::StdRng};
 use crate::vec_based_fold_chain_slice::VecBasedFoldChainSlice;
 
 
+#[allow(dead_code)]
 #[test]
 fn test() {
+    //just the syntax
+    fn assert_is_send_and_sync<T: Send + Sync>(){}
+    fn for_types<'a,T: 'a + Send + Sync,D: Clone + 'a + Send + Sync,Settings: FoldSettings<T,D> + 'a + Send + Sync, Simplification: FoldSimplification<T,D> + 'a + Send + Sync,
+        IsReversed: Bool, IsFlushLeft: Bool, IsFlushRight: Bool>() {
+        assert_is_send_and_sync::<FoldChain<T,D,Settings>>();
+
+        assert_is_send_and_sync::<FoldList<T,D,Settings>>();
+
+        assert_is_send_and_sync::<ImmFoldChainSliceStruct<'a,IsReversed,IsFlushLeft,IsFlushRight,Settings,Simplification,T,D>>();
+
+        assert_is_send_and_sync::<MutFoldChainSliceStruct<'a,IsReversed,IsFlushLeft,IsFlushRight,T,D,Settings,Simplification>>();
+
+        assert_is_send_and_sync::<FoldListSliceFrom<'a,T,D,Settings,Simplification,&'a FoldChain<T,(usize,D),SettingsWithSize<Settings>>>>();
+
+        assert_is_send_and_sync::<FoldListSliceFrom<'a,T,D,Settings,Simplification,&'a mut FoldChain<T,(usize,D),SettingsWithSize<Settings>>>>();
+
+        assert_is_send_and_sync::<FoldListSliceFrom<'a,T,D,Settings,Simplification,ImmFoldChainSliceStruct<'a,IsReversed,IsFlushLeft,IsFlushRight,SettingsWithSize<Settings>,(),T,(usize,D)>>>();
+
+        assert_is_send_and_sync::<FoldListSliceFrom<'a,T,D,Settings,Simplification,MutFoldChainSliceStruct<'a,IsReversed,IsFlushLeft,IsFlushRight,T,(usize,D),SettingsWithSize<Settings>,()>>>();
+    }
     assert!(true);
-    // let mut rng = StdRng::seed_from_u64(385);
-    // for _ in 0..100 {print!("{}",rand_char(&mut rng))}
 }
 
 #[test]
